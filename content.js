@@ -46,13 +46,13 @@ async function selectModel(dropdownElement, modelName) {
     clickElement(dropdownElement);
     
     // Wait for dropdown/dialog to open
-    await new Promise(resolve => setTimeout(resolve, 800));
+    await new Promise(resolve => setTimeout(resolve, 200));
     
     // Additional wait for dialog to fully render
     const dialogAppeared = await waitForElement('[role="dialog"], [role="listbox"], .ant-select-dropdown', 2000).catch(() => null);
     if (dialogAppeared) {
       console.log('Dialog/dropdown appeared');
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
     
     // Try multiple selectors for dropdown options
@@ -120,7 +120,7 @@ async function selectModel(dropdownElement, modelName) {
         option.focus && option.focus();
         
         // Wait for selection to register
-        await new Promise(resolve => setTimeout(resolve, 300));
+        await new Promise(resolve => setTimeout(resolve, 100));
         
         // Simulate Enter key to confirm selection
         const enterEvent = new KeyboardEvent('keydown', {
@@ -133,7 +133,7 @@ async function selectModel(dropdownElement, modelName) {
         option.dispatchEvent(enterEvent);
         
         // Additional wait
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 200));
         
         return true;
       }
@@ -172,7 +172,7 @@ async function applyPreferences() {
     console.log('Saved preferences:', result);
     
     // Wait for the page to be ready
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     // Additional wait to ensure all elements are loaded
     await waitForElement('button[role="combobox"]').catch(() => {
@@ -183,110 +183,50 @@ async function applyPreferences() {
     if (window.location.href.includes('mode=side-by-side')) {
       console.log('Side-by-side mode detected');
       
-      // Try multiple selectors for model dropdowns
-      const dropdownSelectors = [
-        // Look specifically for the model selector container
-        '[data-sentry-component="SideBySideSelector"] button[role="combobox"]',
-        '[data-sentry-source-file="model-selector.tsx"] button[role="combobox"]',
-        // Look for buttons with model icons
-        'button:has(svg[viewBox="0 0 16 16"])',
-        'button:has(svg[viewBox="0 0 24 24"])',
-        // General selectors
-        'button[role="combobox"]',
-        'button[aria-haspopup="dialog"]',
-        '.ant-select-selector',
-        '[data-testid*="model"]',
-        'div[role="combobox"]',
-        'button[aria-haspopup="listbox"]'
-      ];
+      // First, find and exclude the mode selector
+      const allComboboxes = document.querySelectorAll('button[role="combobox"]');
+      let modeSelector = null;
       
-      let dropdowns = [];
-      for (const selector of dropdownSelectors) {
-        try {
-          dropdowns = document.querySelectorAll(selector);
-          if (dropdowns.length >= 2) {
-            console.log(`Found ${dropdowns.length} dropdowns with selector: ${selector}`);
-            
-            // Log what we found for debugging
-            dropdowns.forEach((d, i) => {
-              console.log(`  Dropdown ${i}: "${(d.textContent || '').trim().substring(0, 50)}..."`);
-            });
-            
-            break;
-          }
-        } catch (e) {
-          // Some selectors might not be supported
+      // Identify the mode selector button
+      for (const btn of allComboboxes) {
+        const text = btn.textContent || '';
+        if (text.includes('Battle') || text.includes('Direct Chat') || 
+            text.includes('Side by Side') || text.includes('Compare 2 models')) {
+          modeSelector = btn;
+          console.log('Identified mode selector:', text.trim());
+          break;
         }
       }
       
-      // Convert NodeList to Array if necessary
-      if (!Array.isArray(dropdowns)) {
-        dropdowns = Array.from(dropdowns);
-      }
-      
-      // If we still don't have dropdowns, try a more general approach
-      if (dropdowns.length < 2) {
-        // Look for buttons that might be model selectors
-        const allButtons = document.querySelectorAll('button');
-        dropdowns = Array.from(allButtons).filter(btn => {
-          const text = btn.textContent || '';
-          // Look for buttons that contain model names or are in the model selector area
-          return (text.includes('gpt') || text.includes('claude') || 
-                 text.includes('gemini') || text.includes('llama') ||
-                 text.includes('mistral') || text.includes('o3') ||
-                 text.includes('Select model')) && 
-                 !text.includes('Battle') && !text.includes('Chat');
-        });
-        console.log(`Found ${dropdowns.length} potential model buttons`);
-      }
-      
-      // Additional filter: make sure we're getting the model selector buttons, not mode selector
-      if (dropdowns.length > 2) {
-        // Filter out buttons that are clearly not model selectors
-        dropdowns = dropdowns.filter(btn => {
-          const text = btn.textContent || '';
-          return !text.includes('Battle') && !text.includes('Direct Chat') && 
-                 !text.includes('Side by Side');
-        });
-        console.log(`After filtering: ${dropdowns.length} model buttons`);
-      }
-      
-      // If we have too many dropdowns, try to get only the model ones
-      if (dropdowns.length > 2) {
-        // Check if we can find the specific container
-        const modelSelectorContainer = document.querySelector('[data-sentry-component="SideBySideSelector"]');
-        if (modelSelectorContainer) {
-          const containerButtons = modelSelectorContainer.querySelectorAll('button[role="combobox"]');
-          if (containerButtons.length >= 2) {
-            dropdowns = Array.from(containerButtons);
-            console.log(`Found ${dropdowns.length} model dropdowns in SideBySideSelector`);
-            
-            // If we have 4 dropdowns, it might be 2 pairs (visible/hidden)
-            // Try to filter to get unique ones based on their position or content
-            if (dropdowns.length === 4) {
-              // Get unique dropdowns based on text content
-              const uniqueDropdowns = [];
-              const seenTexts = new Set();
-              
-              for (const dropdown of dropdowns) {
-                const text = (dropdown.textContent || '').trim();
-                if (!seenTexts.has(text) && text !== '') {
-                  uniqueDropdowns.push(dropdown);
-                  seenTexts.add(text);
-                }
-              }
-              
-              if (uniqueDropdowns.length >= 2) {
-                dropdowns = uniqueDropdowns;
-                console.log(`Filtered to ${dropdowns.length} unique dropdowns`);
-              } else {
-                // If that didn't work, just take the first 2
-                dropdowns = Array.from(containerButtons).slice(0, 2);
-                console.log(`Using first 2 dropdowns`);
-              }
-            }
-          }
+      // Get model dropdowns by excluding the mode selector
+      let dropdowns = Array.from(allComboboxes).filter(btn => {
+        // Skip the mode selector
+        if (btn === modeSelector) {
+          console.log('Excluding mode selector from dropdowns');
+          return false;
         }
+        
+        // Also double-check by text content
+        const text = btn.textContent || '';
+        if (text.includes('Battle') || text.includes('Direct Chat') || 
+            text.includes('Side by Side') || text.includes('Compare 2 models')) {
+          console.log('Excluding mode-related button:', text.trim());
+          return false;
+        }
+        
+        return true;
+      });
+      
+      console.log(`Found ${dropdowns.length} potential model dropdowns after excluding mode selector`);
+      
+      // Remove duplicates based on element reference
+      dropdowns = [...new Set(dropdowns)];
+      console.log(`After removing duplicates: ${dropdowns.length} dropdowns`);
+      
+      // Take only first 2 dropdowns if we have more
+      if (dropdowns.length > 2) {
+        dropdowns = dropdowns.slice(0, 2);
+        console.log(`Using first 2 model dropdowns`);
       }
       
       if (dropdowns.length >= 2) {
@@ -299,7 +239,7 @@ async function applyPreferences() {
           if (success1) {
             console.log('Model 1 selected successfully');
             // Verify the selection by checking button text
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise(resolve => setTimeout(resolve, 200));
             const newText1 = dropdowns[0].textContent || '';
             if (newText1.includes(result.model1)) {
               console.log('Model 1 selection verified');
@@ -309,7 +249,7 @@ async function applyPreferences() {
           } else {
             console.log('Failed to select model 1');
           }
-          await new Promise(resolve => setTimeout(resolve, 1500));
+          await new Promise(resolve => setTimeout(resolve, 300));
         }
         
         // Select second model
@@ -319,7 +259,7 @@ async function applyPreferences() {
           if (success2) {
             console.log('Model 2 selected successfully');
             // Verify the selection by checking button text
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise(resolve => setTimeout(resolve, 200));
             const newText2 = dropdowns[1].textContent || '';
             if (newText2.includes(result.model2)) {
               console.log('Model 2 selection verified');
@@ -389,10 +329,10 @@ async function applyPreferencesIfNeeded() {
 // Run when the page loads
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(applyPreferencesIfNeeded, 1000);
+    setTimeout(applyPreferencesIfNeeded, 500);
   });
 } else {
-  setTimeout(applyPreferencesIfNeeded, 1000);
+  setTimeout(applyPreferencesIfNeeded, 500);
 }
 
 // Also run when URL changes (for single-page app navigation)
@@ -403,7 +343,7 @@ new MutationObserver(() => {
     lastUrl = url;
     hasAppliedPreferences = false; // Reset flag when URL changes
     if (url.includes('mode=side-by-side')) {
-      setTimeout(applyPreferencesIfNeeded, 1000);
+      setTimeout(applyPreferencesIfNeeded, 500);
     }
   }
 }).observe(document, { subtree: true, childList: true });
