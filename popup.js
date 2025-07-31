@@ -1,7 +1,7 @@
 // Load saved preferences when popup opens
 document.addEventListener('DOMContentLoaded', async () => {
   try {
-    const result = await browser.storage.local.get(['model1', 'model2']);
+    const result = await browser.storage.local.get(['model1', 'model2', 'searchModel1', 'searchModel2']);
     
     if (result.model1) {
       document.getElementById('model1').value = result.model1;
@@ -9,6 +9,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     if (result.model2) {
       document.getElementById('model2').value = result.model2;
+    }
+    
+    if (result.searchModel1) {
+      document.getElementById('searchModel1').value = result.searchModel1;
+    }
+    
+    if (result.searchModel2) {
+      document.getElementById('searchModel2').value = result.searchModel2;
     }
   } catch (error) {
     console.error('Error loading preferences:', error);
@@ -19,13 +27,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 document.getElementById('save').addEventListener('click', async () => {
   const model1 = document.getElementById('model1').value.trim();
   const model2 = document.getElementById('model2').value.trim();
+  const searchModel1 = document.getElementById('searchModel1').value.trim();
+  const searchModel2 = document.getElementById('searchModel2').value.trim();
   const statusDiv = document.getElementById('status');
   
   try {
     // Save to browser storage
     await browser.storage.local.set({
       model1: model1,
-      model2: model2
+      model2: model2,
+      searchModel1: searchModel1,
+      searchModel2: searchModel2
     });
     
     // Show success message

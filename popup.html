@@ -80,16 +80,30 @@
 <body>
   <h2>LMArena Default Models</h2>
   
+  <h3 style="margin-top: 20px; font-size: 16px; color: #666;">Normal Mode</h3>
   <div class="model-section">
     <label for="model1">Model 1 (Left side):</label>
-    <input type="text" id="model1" placeholder="e.g., gpt-4o">
-    <div class="info">Enter part of the model name (e.g., "gpt-4o" or "claude-3-5")</div>
+    <input type="text" id="model1" placeholder="e.g., o3-2025-04-16">
+    <div class="info">Enter part of the model name (e.g., "o3-2025-04-16")</div>
   </div>
   
   <div class="model-section">
     <label for="model2">Model 2 (Right side):</label>
-    <input type="text" id="model2" placeholder="e.g., claude-3-5">
-    <div class="info">Enter part of the model name (e.g., "gpt-4o" or "claude-3-5")</div>
+    <input type="text" id="model2" placeholder="e.g., gemini-2.5-pro">
+    <div class="info">Enter part of the model name (e.g., "gemini-2.5-pro")</div>
+  </div>
+  
+  <h3 style="margin-top: 30px; font-size: 16px; color: #666;">Search Mode</h3>
+  <div class="model-section">
+    <label for="searchModel1">Search Model 1 (Left side):</label>
+    <input type="text" id="searchModel1" placeholder="e.g., o3-search">
+    <div class="info">Enter search model name (e.g., "o3-search" or "gemini-2.5-pro-grounding")</div>
+  </div>
+  
+  <div class="model-section">
+    <label for="searchModel2">Search Model 2 (Right side):</label>
+    <input type="text" id="searchModel2" placeholder="e.g., gemini-2.5-pro-grounding">
+    <div class="info">Enter search model name (e.g., "ppl-sonar-reasoning-pro-high")</div>
   </div>
   
   <button id="save">Save Preferences</button>

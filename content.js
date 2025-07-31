@@ -46,13 +46,13 @@ async function selectModel(dropdownElement, modelName) {
     clickElement(dropdownElement);
     
     // Wait for dropdown/dialog to open
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise(resolve => setTimeout(resolve, 100));
     
     // Additional wait for dialog to fully render
     const dialogAppeared = await waitForElement('[role="dialog"], [role="listbox"], .ant-select-dropdown', 2000).catch(() => null);
     if (dialogAppeared) {
       console.log('Dialog/dropdown appeared');
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 50));
     }
     
     // Try multiple selectors for dropdown options
@@ -106,10 +106,19 @@ async function selectModel(dropdownElement, modelName) {
       const trimmedText = text.trim();
       
       // Check for exact match or partial match
+      // Also check for search mode variants
+      const modelNameLower = modelName.toLowerCase();
+      const trimmedTextLower = trimmedText.toLowerCase();
+      
       if (trimmedText && (
-        trimmedText.toLowerCase() === modelName.toLowerCase() ||
-        trimmedText.toLowerCase().includes(modelName.toLowerCase()) ||
-        modelName.toLowerCase().includes(trimmedText.toLowerCase())
+        trimmedTextLower === modelNameLower ||
+        trimmedTextLower.includes(modelNameLower) ||
+        modelNameLower.includes(trimmedTextLower) ||
+        // Check for search mode variants
+        (modelNameLower.includes('o3') && trimmedTextLower.includes('o3-search')) ||
+        (modelNameLower.includes('gemini') && trimmedTextLower.includes('gemini') && trimmedTextLower.includes('grounding')) ||
+        (modelNameLower.includes('claude') && trimmedTextLower.includes('claude') && trimmedTextLower.includes('search')) ||
+        (modelNameLower.includes('gpt') && trimmedTextLower.includes('gpt') && trimmedTextLower.includes('search'))
       )) {
         console.log(`Found matching option: "${trimmedText}"`);
         
@@ -120,7 +129,7 @@ async function selectModel(dropdownElement, modelName) {
         option.focus && option.focus();
         
         // Wait for selection to register
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 50));
         
         // Simulate Enter key to confirm selection
         const enterEvent = new KeyboardEvent('keydown', {
@@ -133,7 +142,7 @@ async function selectModel(dropdownElement, modelName) {
         option.dispatchEvent(enterEvent);
         
         // Additional wait
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 100));
         
         return true;
       }
@@ -158,30 +167,76 @@ async function selectModel(dropdownElement, modelName) {
   }
 }
 
+// Check if we're in search mode
+async function isSearchMode() {
+  // Check URL for chat-modality=search parameter
+  if (window.location.href.includes('chat-modality=search')) {
+    console.log('Search mode detected from URL parameter');
+    return true;
+  }
+  
+  // Fallback: Check if dropdown is already populated with search models
+  await new Promise(resolve => setTimeout(resolve, 100));
+  const comboboxes = document.querySelectorAll('[role="combobox"]');
+  for (const box of comboboxes) {
+    const text = box.textContent || '';
+    if (text.includes('-search') || text.includes('-grounding')) {
+      console.log('Search mode detected: dropdown contains search model');
+      return true;
+    }
+  }
+  
+  return false;
+}
+
 // Apply saved preferences
 async function applyPreferences() {
   try {
     // Get saved preferences from storage
-    const result = await browser.storage.local.get(['model1', 'model2']);
+    const result = await browser.storage.local.get(['model1', 'model2', 'searchModel1', 'searchModel2']);
     
-    if (!result.model1 && !result.model2) {
-      console.log('No saved preferences found');
+    // Detect if we're in search mode
+    const searchMode = await isSearchMode();
+    console.log('Mode detected:', searchMode ? 'Search Mode' : 'Normal Mode');
+    
+    // Select appropriate preferences based on mode
+    let selectedModel1, selectedModel2;
+    if (searchMode) {
+      selectedModel1 = result.searchModel1;
+      selectedModel2 = result.searchModel2;
+    } else {
+      selectedModel1 = result.model1;
+      selectedModel2 = result.model2;
+    }
+    
+    if (!selectedModel1 && !selectedModel2) {
+      console.log(`No saved preferences found for ${searchMode ? 'search' : 'normal'} mode`);
       return;
     }
     
-    console.log('Saved preferences:', result);
+    console.log('Using preferences:', { model1: selectedModel1, model2: selectedModel2 });
     
     // Wait for the page to be ready
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 300));
     
     // Additional wait to ensure all elements are loaded
     await waitForElement('button[role="combobox"]').catch(() => {
       console.log('Timeout waiting for combobox buttons');
     });
     
-    // Check if we're in side-by-side mode
-    if (window.location.href.includes('mode=side-by-side')) {
+    // Check current mode
+    const url = window.location.href;
+    const isDirectMode = url.includes('mode=direct');
+    const isSideBySideMode = url.includes('mode=side-by-side');
+    
+    if (isDirectMode) {
+      console.log('Direct Chat mode detected');
+    } else if (isSideBySideMode) {
       console.log('Side-by-side mode detected');
+    }
+    
+    // Apply models for both direct and side-by-side modes
+    if (isDirectMode || isSideBySideMode) {
       
       // First, find and exclude the mode selector
       const allComboboxes = document.querySelectorAll('button[role="combobox"]');
@@ -229,19 +284,19 @@ async function applyPreferences() {
         console.log(`Using first 2 model dropdowns`);
       }
       
-      if (dropdowns.length >= 2) {
-        console.log(`Using ${Math.min(2, dropdowns.length)} model dropdowns`);
+      if (dropdowns.length >= 1) {
+        console.log(`Using ${dropdowns.length} model dropdown(s)`);
         
         // Select first model
-        if (result.model1) {
-          console.log(`Setting model 1 to: ${result.model1}`);
-          const success1 = await selectModel(dropdowns[0], result.model1);
+        if (selectedModel1) {
+          console.log(`Setting model 1 to: ${selectedModel1}`);
+          const success1 = await selectModel(dropdowns[0], selectedModel1);
           if (success1) {
             console.log('Model 1 selected successfully');
             // Verify the selection by checking button text
-            await new Promise(resolve => setTimeout(resolve, 200));
+            await new Promise(resolve => setTimeout(resolve, 100));
             const newText1 = dropdowns[0].textContent || '';
-            if (newText1.includes(result.model1)) {
+            if (newText1.includes(selectedModel1)) {
               console.log('Model 1 selection verified');
             } else {
               console.log('Model 1 selection may not have been applied properly');
@@ -249,19 +304,19 @@ async function applyPreferences() {
           } else {
             console.log('Failed to select model 1');
           }
-          await new Promise(resolve => setTimeout(resolve, 300));
+          await new Promise(resolve => setTimeout(resolve, 200));
         }
         
-        // Select second model
-        if (result.model2) {
-          console.log(`Setting model 2 to: ${result.model2}`);
-          const success2 = await selectModel(dropdowns[1], result.model2);
+        // Select second model only in side-by-side mode
+        if (selectedModel2 && isSideBySideMode && dropdowns.length >= 2) {
+          console.log(`Setting model 2 to: ${selectedModel2}`);
+          const success2 = await selectModel(dropdowns[1], selectedModel2);
           if (success2) {
             console.log('Model 2 selected successfully');
             // Verify the selection by checking button text
-            await new Promise(resolve => setTimeout(resolve, 200));
+            await new Promise(resolve => setTimeout(resolve, 100));
             const newText2 = dropdowns[1].textContent || '';
-            if (newText2.includes(result.model2)) {
+            if (newText2.includes(selectedModel2)) {
               console.log('Model 2 selection verified');
             } else {
               console.log('Model 2 selection may not have been applied properly');
@@ -273,7 +328,7 @@ async function applyPreferences() {
         
         console.log('Model selection process completed');
       } else {
-        console.log(`Could not find enough model selection dropdowns. Found: ${dropdowns.length}`);
+        console.log(`Could not find model selection dropdown(s). Found: ${dropdowns.length}`);
         // Log what we did find for debugging
         dropdowns.forEach((d, i) => {
           console.log(`Dropdown ${i}: ${d.textContent?.substring(0, 50)}...`);
@@ -305,8 +360,9 @@ function areModelsAlreadySelected() {
 
 // Wrapper function to apply preferences only when needed
 async function applyPreferencesIfNeeded() {
-  // Check if we're on the right page
-  if (!window.location.href.includes('mode=side-by-side')) {
+  // Check if we're on the right page (side-by-side or direct mode)
+  const url = window.location.href;
+  if (!url.includes('mode=side-by-side') && !url.includes('mode=direct')) {
     return;
   }
   
@@ -329,10 +385,10 @@ async function applyPreferencesIfNeeded() {
 // Run when the page loads
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(applyPreferencesIfNeeded, 500);
+    setTimeout(applyPreferencesIfNeeded, 300);
   });
 } else {
-  setTimeout(applyPreferencesIfNeeded, 500);
+  setTimeout(applyPreferencesIfNeeded, 300);
 }
 
 // Also run when URL changes (for single-page app navigation)
@@ -342,8 +398,8 @@ new MutationObserver(() => {
   if (url !== lastUrl) {
     lastUrl = url;
     hasAppliedPreferences = false; // Reset flag when URL changes
-    if (url.includes('mode=side-by-side')) {
-      setTimeout(applyPreferencesIfNeeded, 500);
+    if (url.includes('mode=side-by-side') || url.includes('mode=direct')) {
+      setTimeout(applyPreferencesIfNeeded, 300);
     }
   }
 }).observe(document, { subtree: true, childList: true });
