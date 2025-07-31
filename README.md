@@ -1,10 +1,15 @@
 # LMArena Default Model Selector
 
-LMArenaのside-by-sideモードでデフォルトモデルを自動選択するFirefox拡張機能
+LMArenaでデフォルトモデルを自動選択するFirefox拡張機能
 
 ## 概要
 
-[LMArena](https://lmarena.ai/?mode=side-by-side)でモデルを比較する際に、毎回手動でモデルを選択する手間を省きます。お気に入りのモデルを事前に設定しておけば、ページを開くだけで自動的に選択されます。
+[LMArena](https://lmarena.ai/)でモデルを使用する際に、毎回手動でモデルを選択する手間を省きます。お気に入りのモデルを事前に設定しておけば、ページを開くだけで自動的に選択されます。
+
+### 対応モード
+- **Side-by-Side**: 2つのモデルを比較
+- **Direct Chat**: 1つのモデルと対話
+- **Search Mode**: 検索特化モデルを自動検出して適用
 
 ## インストール方法
 
@@ -20,26 +25,39 @@ LMArenaのside-by-sideモードでデフォルトモデルを自動選択するF
 ## 使い方
 
 1. ツールバーの拡張機能アイコンをクリック
-2. 比較したいモデル名を入力
-   - **Model 1**: 左側に表示するモデル
-   - **Model 2**: 右側に表示するモデル
+2. 使用したいモデル名を入力
+   - **通常モード**
+     - **Model 1**: 左側/Direct Chatで使用するモデル
+     - **Model 2**: 右側に表示するモデル（Side-by-Sideのみ）
+   - **検索モード**（自動検出）
+     - **Search Model 1**: 検索用モデル1
+     - **Search Model 2**: 検索用モデル2
 3. 「Save Preferences」をクリック
-4. [LMArena Side-by-Side](https://lmarena.ai/?mode=side-by-side)にアクセス
-5. 自動的に設定したモデルが選択されます
+4. LMArenaにアクセスすると自動的に設定したモデルが選択されます
 
 ## 対応モデル例
 
+### 通常モード
 モデル名の一部を入力するだけでOK：
-- `gpt-4` → gpt-4o-2024-11-20
+- `o3-2025` → o3-2025-04-16
+- `gemini-2.5` → gemini-2.5-pro
 - `claude-3-5` → claude-3-5-sonnet-20241022
-- `gemini` → gemini-2.5-pro
-- `o3` → o3-2025-04-16
+- `gpt-4` → gpt-4o-2024-11-20
+
+### 検索モード
+- `o3-search`
+- `gemini-2.5-pro-grounding`
+- `claude-opus-4-search`
+- `ppl-sonar-reasoning-pro-high`
 
 ## 機能
 
 - 🚀 自動モデル選択
+- 🎯 モード別の設定（通常/検索）
 - 💾 設定の永続保存
 - 🔄 ページ遷移に対応
+- ⚡ 高速動作（待機時間を最適化）
+- 🛡️ モード選択ドロップダウンの誤クリック防止
 - ⌨️ デバッグ用ショートカット（Ctrl+Shift+M）
 
 ## トラブルシューティング
